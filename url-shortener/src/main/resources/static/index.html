@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>snip — url shortener</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <main class="wrap">
+    <header class="hero">
+      <div class="eyebrow">/ base62 encoder /</div>
+      <h1>snip<span class="dot">.</span></h1>
+      <p class="tagline">Long URL in. Short code out. Every click tracked.</p>
+    </header>
+
+    <section class="panel">
+      <form id="shorten-form" class="form">
+        <label for="url-input">Long URL</label>
+        <input
+          id="url-input"
+          type="text"
+          placeholder="https://example.com/a/very/long/path?with=params"
+          required
+        >
+
+        <div class="row">
+          <div class="field">
+            <label for="expiry-input">Expires in (minutes) — optional</label>
+            <input id="expiry-input" type="number" placeholder="never" min="1">
+          </div>
+          <button type="submit" id="submit-btn">Shorten →</button>
+        </div>
+      </form>
+
+      <div id="error-box" class="error hidden"></div>
+
+      <div id="result-box" class="result hidden">
+        <div class="result-label">your short link</div>
+        <div class="result-row">
+          <a id="result-link" href="#" target="_blank" rel="noopener"></a>
+          <button id="copy-btn" class="copy-btn">Copy</button>
+        </div>
+        <div class="result-meta">
+          <span id="result-original"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel stats-panel">
+      <div class="stats-head">
+        <h2>Check clicks</h2>
+        <p>Paste a short code to see how many times it's been visited.</p>
+      </div>
+      <form id="stats-form" class="form inline">
+        <input id="stats-input" type="text" placeholder="e.g. 4c92" required>
+        <button type="submit">Look up</button>
+      </form>
+      <div id="stats-result" class="stats-result hidden"></div>
+    </section>
+
+    <footer class="foot">
+      <span>Base62 encoding · Spring Boot · MySQL</span>
+    </footer>
+  </main>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
