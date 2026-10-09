@@ -1,0 +1,24 @@
+# IDE / editor files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+out/
+
+# Build output
+target/
+*.class
+*.jar
+!**/src/**/target/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Credentials
+.env
+application-local.properties
