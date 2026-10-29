@@ -11,6 +11,8 @@ target/
 *.class
 *.jar
 !**/src/**/target/
+*.mv.db
+*.trace.db
 
 # OS junk
 .DS_Store

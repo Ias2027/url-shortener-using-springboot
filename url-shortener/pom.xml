@@ -41,6 +41,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Lets the app run locally without installing a database. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Bean validation (@NotBlank, @Pattern etc. on request DTOs) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

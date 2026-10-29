@@ -1,7 +1,9 @@
 package com.placement.urlshortener.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,12 +18,11 @@ import lombok.Setter;
 public class ShortenRequest {
 
     @NotBlank(message = "URL must not be empty")
-    @Pattern(
-        regexp = "^(https?://)[\\w.-]+(\\.[a-zA-Z]{2,})+.*$",
-        message = "Please provide a valid http(s) URL"
-    )
+    @Size(max = 2048, message = "URL must be 2048 characters or fewer")
     private String url;
 
     // Optional: minutes from now until this link expires. Null = never.
+    @Positive(message = "Expiry must be at least 1 minute")
+    @Max(value = 525600, message = "Expiry cannot be more than 1 year")
     private Long expiresInMinutes;
 }

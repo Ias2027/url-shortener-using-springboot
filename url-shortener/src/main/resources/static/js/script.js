@@ -29,7 +29,7 @@ shortenForm.addEventListener('submit', async (e) => {
       body: JSON.stringify(body)
     });
 
-    const data = await res.json();
+    const data = await readJson(res);
 
     if (!res.ok) {
       throw new Error(data.message || 'Something went wrong');
@@ -49,10 +49,15 @@ shortenForm.addEventListener('submit', async (e) => {
 });
 
 copyBtn.addEventListener('click', async () => {
-  await navigator.clipboard.writeText(resultLink.href);
-  const original = copyBtn.textContent;
-  copyBtn.textContent = 'Copied!';
-  setTimeout(() => (copyBtn.textContent = original), 1200);
+  try {
+    await navigator.clipboard.writeText(resultLink.href);
+    const original = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => (copyBtn.textContent = original), 1200);
+  } catch {
+    errorBox.textContent = 'Clipboard access is unavailable. Select and copy the link instead.';
+    show(errorBox);
+  }
 });
 
 const statsForm = document.getElementById('stats-form');
@@ -69,21 +74,42 @@ statsForm.addEventListener('submit', async (e) => {
     const code = raw.includes('/r/') ? raw.split('/r/').pop() : raw;
 
     const res = await fetch(`${API_BASE}/${encodeURIComponent(code)}/stats`);
-    const data = await res.json();
+    const data = await readJson(res);
 
     if (!res.ok) throw new Error(data.message || 'Short code not found');
 
-    statsResult.innerHTML = `
-      <div><b>${data.clickCount}</b> click${data.clickCount === 1 ? '' : 's'}</div>
-      <div>created: ${new Date(data.createdAt).toLocaleString()}</div>
-      <div>${data.expiresAt ? 'expires: ' + new Date(data.expiresAt).toLocaleString() : 'no expiry'}</div>
-    `;
+    statsResult.replaceChildren();
+    statsResult.style.color = '';
+
+    const count = document.createElement('div');
+    const countLabel = document.createElement('b');
+    countLabel.textContent = String(data.clickCount);
+    count.append(countLabel, ` click${data.clickCount === 1 ? '' : 's'}`);
+
+    const created = document.createElement('div');
+    created.textContent = `created: ${new Date(data.createdAt).toLocaleString()}`;
+
+    const expiry = document.createElement('div');
+    expiry.textContent = data.expiresAt
+      ? `expires: ${new Date(data.expiresAt).toLocaleString()}`
+      : 'no expiry';
+
+    statsResult.append(count, created, expiry);
     show(statsResult);
   } catch (err) {
-    statsResult.innerHTML = `<span style="color:#f87171">${err.message}</span>`;
+    statsResult.textContent = err.message;
+    statsResult.style.color = 'var(--danger)';
     show(statsResult);
   }
 });
 
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
+
+async function readJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+}

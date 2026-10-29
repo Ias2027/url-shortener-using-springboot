@@ -6,8 +6,10 @@ import com.placement.urlshortener.repository.UrlMappingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.UUID;
 
 /**
  * ============================================================
@@ -55,32 +57,33 @@ public class UrlShortenerService {
     }
 
     /**
-     * Creates (or reuses) a short code for the given long URL.
+     * Creates a short code for the given long URL.
      *
      * Flow:
-     *  1. If this exact URL was already shortened before, return the existing
-     *     short code instead of creating a duplicate row (saves space, and
-     *     means the same long URL always maps to the same short URL).
-     *  2. Otherwise save a new row with a placeholder, so the DB assigns an
+     *  1. Validate and normalize the destination URL.
+     *  2. Save a new row with a placeholder, so the DB assigns an
      *     auto-increment id.
      *  3. Encode that id to Base62 -> this becomes the shortCode.
      *  4. Update the row with the real shortCode and save again.
      *
      * Step 2+4 (save twice) is necessary because we don't know the id until
      * AFTER the first insert - the encoding depends on a value the DB itself
-     * generates. This is a common, honest talking point in interviews.
+     * generates. Each request creates its own link so expiry settings are
+     * never silently changed by reusing another link for the same URL.
      */
     @Transactional
     public UrlMapping createShortUrl(String originalUrl, LocalDateTime expiresAt) {
-        Optional<UrlMapping> existing = repository.findByOriginalUrl(originalUrl);
-        if (existing.isPresent()) {
-            return existing.get();
+        String validatedUrl = validateOriginalUrl(originalUrl);
+        if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Expiry must be in the future");
         }
 
         UrlMapping mapping = new UrlMapping();
-        mapping.setOriginalUrl(originalUrl);
+        mapping.setOriginalUrl(validatedUrl);
         mapping.setExpiresAt(expiresAt);
-        mapping.setShortCode(""); // temporary, filled in below once we have an id
+        // A unique placeholder avoids collisions while concurrent inserts wait
+        // for the database-generated ID used by the final Base62 code.
+        mapping.setShortCode(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
 
         UrlMapping saved = repository.save(mapping); // id gets generated here
 
@@ -95,20 +98,42 @@ public class UrlShortenerService {
      */
     @Transactional
     public UrlMapping resolveAndTrackClick(String shortCode) {
-        UrlMapping mapping = repository.findByShortCode(shortCode)
-                .orElseThrow(() -> new ShortCodeNotFoundException(shortCode));
-
-        if (mapping.getExpiresAt() != null && mapping.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (shortCode == null || shortCode.isEmpty() || shortCode.length() > 12
+                || !shortCode.matches("[0-9a-zA-Z]+")) {
             throw new ShortCodeNotFoundException(shortCode);
         }
 
-        mapping.setClickCount(mapping.getClickCount() + 1);
-        return repository.save(mapping);
+        int updated = repository.incrementClickCountIfActive(shortCode, LocalDateTime.now());
+        if (updated == 0) {
+            throw new ShortCodeNotFoundException(shortCode);
+        }
+        return repository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ShortCodeNotFoundException(shortCode));
     }
 
     public UrlMapping getStats(String shortCode) {
         return repository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ShortCodeNotFoundException(shortCode));
+    }
+
+    private String validateOriginalUrl(String originalUrl) {
+        if (originalUrl == null || originalUrl.isBlank() || originalUrl.length() > 2048) {
+            throw new IllegalArgumentException("Provide a URL between 1 and 2048 characters");
+        }
+
+        String value = originalUrl.trim();
+        try {
+            URI uri = new URI(value);
+            String scheme = uri.getScheme();
+            if (!uri.isAbsolute() || uri.getHost() == null || uri.getHost().isBlank()
+                    || uri.getUserInfo() != null || scheme == null
+                    || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                throw new IllegalArgumentException("Please provide a valid http(s) URL");
+            }
+            return uri.toASCIIString();
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException("Please provide a valid http(s) URL");
+        }
     }
 
     /**

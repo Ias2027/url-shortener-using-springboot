@@ -32,7 +32,7 @@ public class UrlMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 12)
+    @Column(nullable = false, length = 12)
     private String shortCode;
 
     @Column(nullable = false, length = 2048)

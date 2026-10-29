@@ -6,6 +6,7 @@ import com.placement.urlshortener.model.UrlMapping;
 import com.placement.urlshortener.service.UrlShortenerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +37,8 @@ public class UrlApiController {
                 : null;
 
         UrlMapping mapping = service.createShortUrl(request.getUrl(), expiresAt);
-        return ResponseEntity.ok(new ShortenResponse(mapping, baseUrl(httpRequest)));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ShortenResponse(mapping, baseUrl(httpRequest)));
     }
 
     // GET /api/urls/{code}/stats  -> click count, created date, etc.

@@ -21,8 +21,10 @@
         <label for="url-input">Long URL</label>
         <input
           id="url-input"
-          type="text"
+          type="url"
           placeholder="https://example.com/a/very/long/path?with=params"
+          maxlength="2048"
+          autocomplete="url"
           required
         >
 

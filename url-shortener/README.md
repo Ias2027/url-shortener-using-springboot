@@ -1,114 +1,60 @@
-# snip — URL Shortener
+# snip — URL shortener
 
-A simple URL shortener I built to get hands-on with Spring Boot, REST APIs, and database design.
-Paste in a long URL, get back a short one. Clicks are tracked so you can see how often a link gets used.
+A URL shortener built with Spring Boot 3 and Java 17. It generates Base62 short codes, tracks redirects, and supports expiring links.
 
-## How it works
+## Run locally
 
-The short codes are created by **Base62-encoding the database row ID**. Since the ID is auto-incremented
-and guaranteed unique by MySQL, the short code can never collide with an existing one — no need for
-retries or collision checks. The character set is `0-9, a-z, A-Z` (62 chars total), which keeps the
-codes short and URL-safe without any special characters.
+Install Java 17 and Maven, then run:
 
-When someone visits a short link, the app looks up the original URL, bumps the click counter, and
-sends back an HTTP 302 redirect. I used 302 (temporary) instead of 301 (permanent) on purpose — a 301
-tells the browser to cache the redirect forever, which would mess up click tracking since the browser
-would skip the server on repeat visits.
-
-## Tech stack
-
-- **Backend:** Spring Boot 3.3, Java 17
-- **Database:** MySQL (with Hibernate/JPA for ORM)
-- **Frontend:** Plain HTML/CSS/JS — no framework, just a clean single-page form
-- **Containerization:** Dockerfile included (multi-stage build)
-
-## Project structure
-
-```
-url-shortener/
-├── pom.xml
-├── Dockerfile
-└── src/main/
-    ├── java/com/placement/urlshortener/
-    │   ├── UrlShortenerApplication.java        # entry point
-    │   ├── model/UrlMapping.java               # DB entity
-    │   ├── repository/UrlMappingRepository.java
-    │   ├── service/UrlShortenerService.java    # core logic (Base62 encoding)
-    │   ├── controller/
-    │   │   ├── UrlApiController.java           # REST API endpoints
-    │   │   └── UrlRedirectController.java      # handles /r/{code} redirects
-    │   ├── dto/                                # request/response objects
-    │   ├── exception/                          # error handling
-    │   └── config/WebConfig.java               # CORS config
-    └── resources/
-        ├── application.properties
-        └── static/                             # frontend files
+```bash
+cd url-shortener
+mvn spring-boot:run
 ```
 
-## Running locally
+Open [http://localhost:8080](http://localhost:8080). Local development uses a persistent H2 database file, so MySQL is not required. Maven creates the database automatically on first launch.
 
-You'll need Java 17+, Maven, and MySQL installed.
+## Run with MySQL in Docker
 
-1. Create the database (or just let it auto-create — `createDatabaseIfNotExist=true` is already set):
-   ```sql
-   CREATE DATABASE IF NOT EXISTS url_shortener;
-   ```
-2. Check `src/main/resources/application.properties` — the defaults are `root`/`root` for MySQL.
-   Update them if yours are different.
-3. Start the app:
-   ```bash
-   mvn spring-boot:run
-   ```
-4. Open [http://localhost:8080](http://localhost:8080) — the frontend loads automatically.
+Install Docker Compose, copy `.env.example` to `.env`, and set a local database password in `.env`. Then run from the repository root:
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:8080](http://localhost:8080). The MySQL data is stored in the `mysql-data` Docker volume.
 
 ## API
 
-| Method | Endpoint | What it does |
-|--------|----------|--------------|
-| POST | `/api/urls/shorten` | Shortens a URL. Body: `{"url": "https://...", "expiresInMinutes": 60}` (expiry is optional) |
-| GET | `/api/urls/{code}/stats` | Returns click count, creation date, expiry |
-| GET | `/r/{code}` | Redirects to the original URL and increments click count |
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/urls/shorten` | Create a short link. Body: `{"url":"https://example.com","expiresInMinutes":60}`; expiry is optional. |
+| `GET` | `/api/urls/{code}/stats` | Read link stats, including click count and expiry. |
+| `GET` | `/r/{code}` | Record a click and redirect to the original URL. |
 
-### Example
+Example:
 
 ```bash
-# Shorten a URL
 curl -X POST http://localhost:8080/api/urls/shorten \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://docs.spring.io/spring-boot/docs/current/reference/html/"}'
-
-# Check stats
-curl http://localhost:8080/api/urls/1c/stats
+  -d '{"url":"https://spring.io"}'
 ```
 
-## Deploying (Docker)
+The create endpoint returns `201 Created`. Invalid URLs and invalid expiry values return `400`; unknown and expired short codes return `404`.
 
-The repo includes a multi-stage Dockerfile. To deploy on something like Render or Railway:
+## Configuration
 
-1. Push to GitHub
-2. Connect the repo on your cloud platform — it'll detect the Dockerfile
-3. Set these environment variables for your managed MySQL:
-   - `DB_URL` — e.g. `jdbc:mysql://host:3306/dbname`
-   - `DB_USERNAME`
-   - `DB_PASSWORD`
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `8080` | HTTP port |
+| `DB_URL` | Persistent local H2 file | JDBC URL; set a MySQL JDBC URL to use MySQL |
+| `DB_USERNAME` | `sa` | Database username |
+| `DB_PASSWORD` | Empty | Database password |
 
-The app already reads from environment variables with local fallbacks, so the same code works
-in both dev and production without any changes.
+For a hosted MySQL service, set all three `DB_*` variables. Keep credentials in the host's secret store; do not commit `.env` or passwords.
 
-## Design decisions worth noting
+## Design notes
 
-- **Base62 over random strings:** No collision handling needed since database IDs are unique by definition.
-  The trade-off is that codes are sequential (id 100 produces a similar code to id 101), which means
-  someone could guess other short URLs. For a production system you'd want to shuffle the mapping.
-- **DTOs instead of exposing entities:** The API response shape is decoupled from the database schema,
-  so either can change independently.
-- **Global exception handler:** Errors are caught centrally (`@RestControllerAdvice`) instead of
-  try-catch blocks in every controller — keeps things cleaner.
-- **302 redirect for click tracking:** Already covered above, but it's an intentional choice.
-
-## What I'd add with more time
-
-- Redis caching for frequently accessed short codes
-- Rate limiting on the shorten endpoint
-- A dashboard page showing all created links and their stats
-- Proper unit and integration tests
+- Base62 encoding of the database ID guarantees unique, compact short codes. Codes are sequential and guessable, so use random codes if links need to resist enumeration.
+- Each request creates its own link. This keeps requested expiry behavior predictable when the same destination is shortened more than once.
+- Redirect clicks use an atomic database increment so concurrent visits are counted correctly.
+- H2 is intended for a simple local run. Use MySQL for a multi-instance or production deployment, and replace schema auto-update with a migration tool before treating the service as production infrastructure.

@@ -1,17 +1,14 @@
-# URL Shortener — Spring Boot
+# snip — URL shortener
 
-A URL shortener built with Spring Boot, MySQL, and vanilla JavaScript.
-Converts long URLs into short, unique codes using Base62 encoding of database IDs — no collisions by design.
-Includes click tracking and optional link expiration.
-
-→ See [url-shortener/README.md](url-shortener/README.md) for full setup instructions, API docs, and design notes.
+A URL shortener built with Spring Boot 3, Java 17, and vanilla JavaScript. It creates Base62 short codes, tracks redirects, and supports expiring links.
 
 ## Quick start
 
+Install Java 17 and Maven, then run:
+
 ```bash
-# Make sure MySQL is running, then:
 cd url-shortener
 mvn spring-boot:run
 ```
 
-Open [http://localhost:8080](http://localhost:8080) and start shortening URLs.
+Open [http://localhost:8080](http://localhost:8080). Local development uses a persistent H2 file, so MySQL is not required. See [url-shortener/README.md](url-shortener/README.md) for MySQL Docker setup, configuration, and API details.
