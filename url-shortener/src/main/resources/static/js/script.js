@@ -71,7 +71,13 @@ statsForm.addEventListener('submit', async (e) => {
   try {
     // Accept either a bare code ("4c92") or a full pasted short URL.
     const raw = statsInput.value.trim();
-    const code = raw.includes('/r/') ? raw.split('/r/').pop() : raw;
+    let code = raw;
+    if (raw.includes('/r/')) {
+      const pastedUrl = new URL(raw, window.location.origin);
+      const match = pastedUrl.pathname.match(/\/r\/([0-9a-zA-Z]{1,12})\/?$/);
+      if (!match) throw new Error('Enter a short code or a valid /r/{code} link');
+      code = match[1];
+    }
 
     const res = await fetch(`${API_BASE}/${encodeURIComponent(code)}/stats`);
     const data = await readJson(res);

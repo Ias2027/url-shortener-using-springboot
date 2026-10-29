@@ -1,6 +1,6 @@
 # snip — URL shortener
 
-A URL shortener built with Spring Boot 3, Java 17, and vanilla JavaScript. It creates Base62 short codes, tracks redirects, and supports expiring links.
+A URL shortener built with Spring Boot 3.5, Java 17, and vanilla JavaScript. It creates Base62 short codes, tracks redirects, and supports expiring links.
 
 ## Quick start
 

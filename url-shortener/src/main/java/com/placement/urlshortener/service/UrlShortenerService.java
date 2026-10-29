@@ -98,8 +98,7 @@ public class UrlShortenerService {
      */
     @Transactional
     public UrlMapping resolveAndTrackClick(String shortCode) {
-        if (shortCode == null || shortCode.isEmpty() || shortCode.length() > 12
-                || !shortCode.matches("[0-9a-zA-Z]+")) {
+        if (!isValidShortCode(shortCode)) {
             throw new ShortCodeNotFoundException(shortCode);
         }
 
@@ -112,8 +111,16 @@ public class UrlShortenerService {
     }
 
     public UrlMapping getStats(String shortCode) {
+        if (!isValidShortCode(shortCode)) {
+            throw new ShortCodeNotFoundException(shortCode);
+        }
         return repository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ShortCodeNotFoundException(shortCode));
+    }
+
+    private boolean isValidShortCode(String shortCode) {
+        return shortCode != null && !shortCode.isEmpty() && shortCode.length() <= 12
+                && shortCode.matches("[0-9a-zA-Z]+");
     }
 
     private String validateOriginalUrl(String originalUrl) {
@@ -142,13 +149,13 @@ public class UrlShortenerService {
      * instead of 2. Repeatedly divide by 62, the remainder at each step
      * is the next digit (read in reverse at the end).
      *
-     * Example: id = 125
-     *   125 / 62 = 2 remainder 1  -> digit 'b' (index 1... wait, index math below)
-     *   2   / 62 = 0 remainder 2  -> digit 'c'  eventually built as "b" prefixed
-     * (Walk through this by hand once with a small number - it's the
-     * single most likely thing you'll be asked to explain on a whiteboard.)
+     * Example: id = 125 -> 125 / 62 = 2 remainder 1, then 2 / 62 = 0
+     * remainder 2. Reading the remainders in reverse gives "21".
      */
     String encode(long id) {
+        if (id < 0) {
+            throw new IllegalArgumentException("ID must not be negative");
+        }
         StringBuilder sb = new StringBuilder();
         if (id == 0) return String.valueOf(ALPHABET.charAt(0));
 
@@ -166,9 +173,16 @@ public class UrlShortenerService {
      * "how would you decode a short code back to the id?"
      */
     long decode(String shortCode) {
+        if (shortCode == null || shortCode.isEmpty()) {
+            throw new IllegalArgumentException("Short code must not be empty");
+        }
         long id = 0;
         for (char c : shortCode.toCharArray()) {
-            id = id * BASE + ALPHABET.indexOf(c);
+            int digit = ALPHABET.indexOf(c);
+            if (digit < 0) {
+                throw new IllegalArgumentException("Short code contains an invalid character");
+            }
+            id = Math.addExact(Math.multiplyExact(id, BASE), digit);
         }
         return id;
     }

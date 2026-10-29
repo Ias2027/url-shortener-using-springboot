@@ -6,10 +6,10 @@ import com.placement.urlshortener.model.UrlMapping;
 import com.placement.urlshortener.service.UrlShortenerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 
 /**
@@ -37,8 +37,8 @@ public class UrlApiController {
                 : null;
 
         UrlMapping mapping = service.createShortUrl(request.getUrl(), expiresAt);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ShortenResponse(mapping, baseUrl(httpRequest)));
+        ShortenResponse response = new ShortenResponse(mapping, baseUrl(httpRequest));
+        return ResponseEntity.created(URI.create(response.getShortUrl())).body(response);
     }
 
     // GET /api/urls/{code}/stats  -> click count, created date, etc.
@@ -50,8 +50,12 @@ public class UrlApiController {
     }
 
     private String baseUrl(HttpServletRequest request) {
-        return request.getScheme() + "://" + request.getServerName()
-                + (request.getServerPort() == 80 || request.getServerPort() == 443
-                    ? "" : ":" + request.getServerPort());
+        String scheme = request.getScheme();
+        int port = request.getServerPort();
+        boolean defaultPort = ("http".equalsIgnoreCase(scheme) && port == 80)
+                || ("https".equalsIgnoreCase(scheme) && port == 443);
+
+        return scheme + "://" + request.getServerName()
+                + (defaultPort ? "" : ":" + port);
     }
 }

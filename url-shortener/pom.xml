@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.2</version>
+        <version>3.5.16</version>
         <relativePath/>
     </parent>
 
@@ -52,6 +52,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Provides an HTTP health endpoint for local and hosted deployments. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
         <!-- Cuts boilerplate: getters/setters/constructors via annotations -->

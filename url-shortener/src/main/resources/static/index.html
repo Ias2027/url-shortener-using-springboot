@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>snip — url shortener</title>
+<meta name="description" content="Turn long URLs into short, trackable links with optional expiry.">
+<meta name="theme-color" content="#0b0e11">
+<title>snip — URL shortener</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -37,9 +39,9 @@
         </div>
       </form>
 
-      <div id="error-box" class="error hidden"></div>
+      <div id="error-box" class="error hidden" role="alert"></div>
 
-      <div id="result-box" class="result hidden">
+      <div id="result-box" class="result hidden" role="status" aria-live="polite">
         <div class="result-label">your short link</div>
         <div class="result-row">
           <a id="result-link" href="#" target="_blank" rel="noopener"></a>
@@ -57,10 +59,11 @@
         <p>Paste a short code to see how many times it's been visited.</p>
       </div>
       <form id="stats-form" class="form inline">
-        <input id="stats-input" type="text" placeholder="e.g. 4c92" required>
+        <label class="visually-hidden" for="stats-input">Short code or short URL</label>
+        <input id="stats-input" type="text" placeholder="e.g. 4c92" autocomplete="off" required>
         <button type="submit">Look up</button>
       </form>
-      <div id="stats-result" class="stats-result hidden"></div>
+      <div id="stats-result" class="stats-result hidden" role="status" aria-live="polite"></div>
     </section>
 
     <footer class="foot">

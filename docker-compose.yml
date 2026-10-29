@@ -1,6 +1,7 @@
 services:
   database:
     image: mysql:8
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     environment:
       MYSQL_DATABASE: url_shortener
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
